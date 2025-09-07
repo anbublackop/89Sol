@@ -24,10 +24,14 @@ def summarize(articles):
 
 def get_data_from_source(url, params):
     print(f"Fetching data for item {url} from source...")
-    return requests.get(url, params = params)
+    response = requests.get(url, params = params).json()
+    return response
 
 def get_cached_data(item, params):
-    item_id = f"{item}-{params.get('source')}"
+    if 'article' in item:
+        item_id = f"{item}{params.get('source').strip().lower()}"
+    else:
+        item_id = f"{item}{params.get('q').strip().lower()}-{params.get('from').strip().lower()}"
     key = f"item: {item_id}"
     cached_data = r.get(key)
     if cached_data:
@@ -36,8 +40,7 @@ def get_cached_data(item, params):
     else:
         print(f"Cache miss for item {item_id}")
         data = get_data_from_source(item, params)
-        # Store data in Redis with an expiration time (e.g., 60 seconds)
-        r.setex(key, 60, json.dumps(data)) 
+        r.setex(key, 300, json.dumps(data)) #saving data for 600 seconds 
         return data
 
 
@@ -55,10 +58,9 @@ async def get_articles(source: str = "bbc-news"):
         "apiKey": api_key
     }
     try:
-        # response = requests.get(articles_url, params = params)
         response = get_cached_data(articles_url, params)
-        if response.status_code == 200:
-            articles = response.json().get('articles')
+        if response.get('status') == 'ok':
+            articles = response.get('articles')
             return articles
     except Exception as e:
         return {
@@ -75,10 +77,9 @@ async def get_everything(keyword: str, from_date: str = "2025-09-03"):
         "apiKey": api_key
     }
     try:
-        # response = requests.get(everything_url, params = params)
         response = get_cached_data(everything_url, params)
-        if response.status_code == 200:
-            articles = response.json().get('articles')
+        if response.get('status') == 'ok':
+            articles = response.get('articles')
             return articles
     except Exception as e:
         return {
