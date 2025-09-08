@@ -3,6 +3,7 @@ import requests, json
 import os
 from dotenv import load_dotenv
 import redis
+import copy
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 
@@ -22,16 +23,19 @@ def summarize(articles):
         print("URL:", art['url'])
         print("----")
 
+def create_key_to_cache_date(params):
+    elements = copy.deepcopy(params)
+    del elements['apiKey']
+    elements = {key: value.strip().lower() for key, value in elements.items()}
+    return '-'.join(elements.values())
+
 def get_data_from_source(url, params):
     print(f"Fetching data for item {url} from source...")
     response = requests.get(url, params = params).json()
     return response
 
 def get_cached_data(item, params):
-    if 'article' in item:
-        item_id = f"{item}{params.get('source').strip().lower()}"
-    else:
-        item_id = f"{item}{params.get('q').strip().lower()}-{params.get('from').strip().lower()}"
+    item_id = f"{item}{create_key_to_cache_date(params)}"
     key = f"item: {item_id}"
     cached_data = r.get(key)
     if cached_data:
@@ -42,7 +46,6 @@ def get_cached_data(item, params):
         data = get_data_from_source(item, params)
         r.setex(key, 300, json.dumps(data)) #saving data for 600 seconds 
         return data
-
 
 @app.get('/')
 async def root():
@@ -68,11 +71,12 @@ async def get_articles(source: str = "bbc-news"):
         }
     
 @app.get('/get-everything')
-async def get_everything(keyword: str, from_date: str = "2025-09-03"):
+async def get_everything(keyword: str, from_date: str = "2025-09-03", to_date: str = "2025-09-08"):
     everything_url = f"{base_url}{everything_extension}"
     params = {
         "q": keyword,
         "from": from_date,
+        "to": to_date,
         "sortBy": "popularity",
         "apiKey": api_key
     }
