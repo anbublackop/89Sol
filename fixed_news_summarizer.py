@@ -1,11 +1,13 @@
-from fastapi import FastAPI
-import requests, json
-import os
-from dotenv import load_dotenv
-import redis
 import copy
+import json
+import os
 
-r = redis.Redis(host='redis_db', port=6379, db=0)
+import redis
+import requests
+from dotenv import load_dotenv
+from fastapi import FastAPI
+
+r = redis.Redis(host="redis_db", port=6379, db=0)
 
 load_dotenv()
 
@@ -16,23 +18,27 @@ everything_extension = os.getenv("EVERYTHING_EXTENSION")
 
 app = FastAPI()
 
+
 def summarize(articles):
     for art in articles:
-        print("Title:", art['title'])
-        print("Description:", art['description'])
-        print("URL:", art['url'])
+        print("Title:", art["title"])
+        print("Description:", art["description"])
+        print("URL:", art["url"])
         print("----")
+
 
 def create_key_to_cache_date(params):
     elements = copy.deepcopy(params)
-    del elements['apiKey']
+    del elements["apiKey"]
     elements = {key: value.strip().lower() for key, value in elements.items()}
-    return '-'.join(elements.values())
+    return "-".join(elements.values())
+
 
 def get_data_from_source(url, params):
     print(f"Fetching data for item {url} from source...")
-    response = requests.get(url, params = params).json()
+    response = requests.get(url, params=params).json()
     return response
+
 
 def get_cached_data(item, params):
     item_id = f"{item}{create_key_to_cache_date(params)}"
@@ -44,48 +50,44 @@ def get_cached_data(item, params):
     else:
         print(f"Cache miss for item {item_id}")
         data = get_data_from_source(item, params)
-        r.setex(key, 300, json.dumps(data)) #saving data for 600 seconds 
+        r.setex(key, 300, json.dumps(data))  # saving data for 300 seconds
         return data
 
-@app.get('/')
-async def root():
-    return {
-        "This is the index page"
-    }
 
-@app.get('/get-articles')
+@app.get("/")
+async def root():
+    return {"This is the index page"}
+
+
+@app.get("/get-articles")
 async def get_articles(source: str = "bbc-news"):
     articles_url = f"{base_url}{article_extension}"
-    params = {
-        "source": source,
-        "apiKey": api_key
-    }
+    params = {"source": source, "apiKey": api_key}
     try:
         response = get_cached_data(articles_url, params)
-        if response.get('status') == 'ok':
-            articles = response.get('articles')
+        if response.get("status") == "ok":
+            articles = response.get("articles")
             return articles
     except Exception as e:
-        return {
-            "message": str(e)
-        }
-    
-@app.get('/get-everything')
-async def get_everything(keyword: str, from_date: str = "2025-09-03", to_date: str = "2025-09-08"):
+        return {"message": str(e)}
+
+
+@app.get("/get-everything")
+async def get_everything(
+    keyword: str, from_date: str = "2025-09-03", to_date: str = "2025-09-08"
+):
     everything_url = f"{base_url}{everything_extension}"
     params = {
         "q": keyword,
         "from": from_date,
         "to": to_date,
         "sortBy": "popularity",
-        "apiKey": api_key
+        "apiKey": api_key,
     }
     try:
         response = get_cached_data(everything_url, params)
-        if response.get('status') == 'ok':
-            articles = response.get('articles')
+        if response.get("status") == "ok":
+            articles = response.get("articles")
             return articles
     except Exception as e:
-        return {
-            "message": str(e)
-        }
+        return {"message": str(e)}
