@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  news_app:
+    build:
+      context: .  # Directory containing your FastAPI app and Dockerfile
+    ports:
+      - "8000:8000"  # Map host port 8000 to container port 8000
+    volumes:
+      - .:/app  # Mount local 'app' directory to container's '/app'
+    depends_on:
+      - redis_db
+    environment:
+      - REDIS_HOST=redis_db  # Use the service name for Redis host
+      - REDIS_PORT=6379
+      - SECRET_KEY=${SECRET_KEY}
+      - BASE_URL=${BASE_URL}
+      - ARTICLE_EXTENSION=${ARTICLE_EXTENSION}
+      - EVERYTHING_EXTENSION=${EVERYTHING_EXTENSION}
+    command: uvicorn fixed_news_summarizer:app --host 0.0.0.0 --port 8000 --reload
+
+  redis_db:
+    image: redis:latest  # Use the official Redis image
+    ports:
+      - "6379:6379"  # Map host port 6379 to container port 6379

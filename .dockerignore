@@ -1,0 +1,25 @@
+# Ignore common development-related directories and files
+node_modules/
+.git/
+.vscode/
+.idea/
+coverage/
+build/
+dist/
+tmp/
+
+# Ignore log files and environment variables
+*.log
+.env
+.env.*
+
+# Ignore specific sensitive files
+secrets.txt
+config.json
+
+# Exclude all markdown files but include README.md
+*.md
+!README.md
+
+# Ignore the .dockerignore file itself (optional but good practice)
+.dockerignore

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import redis
 import copy
 
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis(host='redis_db', port=6379, db=0)
 
 load_dotenv()
 
